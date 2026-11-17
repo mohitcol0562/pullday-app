@@ -28,10 +28,10 @@ Updated at the end of every milestone. This is the status tracker for the build,
 
 This is a time-boxed (15h) work-trial assignment. **Pullday** is a card-collecting daily-habit app. A v1 already shipped with real bugs (streaks resetting at 11:58pm, lost streaks after paid freezes/win-backs, a card disappearing after a phone call, collection-screen lag, swipes not registering, a freeze when a rare card appears). The brief is explicitly grading **judgment and correctness over feature count** — what you build first, what you cut, and how honestly you document it. Finishing everything is *not* expected.
 
-We build a trimmed but correct slice: the daily 8-card swipe challenge, streak state machine with freeze/win-back, collection + binder, and a minimal Postgres-backed backend. We borrow architectural conventions from `/Users/mohit/my-projects/nivo` (bare RN CLI patterns) but create **new repos** — not a fork.
+We build a trimmed but correct slice: the daily 8-card swipe challenge, streak state machine with freeze/win-back, collection + binder, and a minimal Postgres-backed backend, built on my own React Native architecture conventions (bare RN CLI patterns) as **new repos** — not a fork of anything.
 
 ### Locked decisions
-- **Bare React Native CLI** (not Expo), matching nivo: RN 0.87.0 / React 19.2.8 / TS 5.0.4, New Architecture enabled.
+- **Bare React Native CLI** (not Expo), my standard stack: RN 0.87.0 / React 19.2.8 / TS 5.0.4, New Architecture enabled.
 - **iOS first** (primary tested target); Android only if time allows, never at iOS's expense.
 - **App-first, mock-data-first.** Build the **app** fully against an in-app **mock data layer** (fixtures behind the same `ApiClient` interface) — get the whole UX working end-to-end on mocks. **Then** build basic backend CRUDs and swap the mock client for the real one. Backend is Phase 2, not Phase 1.
 - **Core functionality first, in this order:** (1) card rendering & swipe (Home), (2) collection listing, (3) streak (**timer-based** — countdown to the next day / time left), then (4) one streak-freeze **buy** screen.
@@ -84,7 +84,7 @@ The app talks to one `ApiClient` interface from day one. Behind it, a **`MockApi
 
 ### App (`pullday-app`)
 
-**Conventions borrowed from nivo** (reinstated after initial feedback — see AI.md): each screen is a **folder** with `index.ts` (re-exports the container), `<screen>.container.tsx` (owns state/hooks/handlers), `<screen>.view.tsx` (pure presentation, typed via `type.ts`), `styles.ts` (static `StyleSheet.create`, no theme hook since there's no theme system), and `utils/use<Thing>Query.ts` for each data-fetching call.
+**My codebase conventions** (reinstated after initial feedback — see AI.md): each screen is a **folder** with `index.ts` (re-exports the container), `<screen>.container.tsx` (owns state/hooks/handlers), `<screen>.view.tsx` (pure presentation, typed via `type.ts`), `styles.ts` (static `StyleSheet.create`, no theme hook since there's no theme system), and `utils/use<Thing>Query.ts` for each data-fetching call.
 
 **The query-hook contract, exactly** (corrected twice on review — see AI.md, don't drift from this):
 - The hook owns `data`/`error`/`isLoading` state (`useState`, no `useEffect`, no generic wrapper, no `alive`/cancellation ref) and exposes **one named async action** that performs the call and updates that state — e.g. `fetchHomeData`, `fetchOwnedCards`, `fetchServerDate`. Never a generic `refetch`/`fetch` name; name it after what it fetches.
@@ -94,7 +94,7 @@ The app talks to one `ApiClient` interface from day one. Behind it, a **`MockApi
 
 Also: `SCREENS` enum + typed `RootStackParamList`; one global Zustand store from domain slices with `persist`+AsyncStorage+`partialize`; `ApiClient` class; plain `StyleSheet.create`; custom SVG icon set via `react-native-svg` (not a vector-icons font) for the bottom tab bar.
 
-**Still cut from nivo**: theme system / dark mode / `AppearanceProvider` — single flat palette only; `verticalScale`/`horizontalScale`; `APP_TEXT` copy centralization. Not graded, not worth the hours.
+**Still cut from my usual conventions**: theme system / dark mode / `AppearanceProvider` — single flat palette only; `verticalScale`/`horizontalScale`; `APP_TEXT` copy centralization. Not graded, not worth the hours.
 
 ```
 pullday-app/src/
@@ -209,7 +209,7 @@ All logic server-side only (client-side streak math is how v1 broke). **Lazy che
 - **Reveal overlay (`RevealOverlay.tsx`)** unchanged: a separate unmounted-until-needed component; prefetches the reward card's image before animating in.
 - **Why the switch:** `rn-swiper-list` rendered card 1 correctly but every card from index 1 onward stayed invisible after the first swipe — reproduced on multiple fresh launches, in multiple swipe directions, and a smaller `prerenderItems` didn't fix it. The plan's own risk section anticipated this ("if the library misbehaves... swap the internals without touching Home") — that's exactly what happened. The custom version is simpler than the library (one active card, not a stack) and fully verified working end-to-end on-device.
 
-**Collection (~2000 items, fixes bug #4):** plain `FlatList` 3-col grid with `getItemLayout` (fixed cells), `windowSize={5}`, `removeClippedSubviews`, tuned `initialNumToRender`/`maxToRenderPerBatch`. **No FlashList** by default (uniform cells = FlatList's strong case); swap in `@shopify/flash-list` only if real-device profiling stutters (named contingency). `@d11/react-native-fast-image` (nivo-proven) for every thumb; page `GET /cards?limit=100` rather than loading all rows. Owned vs greyed = opacity toggle on the same image.
+**Collection (~2000 items, fixes bug #4):** plain `FlatList` 3-col grid with `getItemLayout` (fixed cells), `windowSize={5}`, `removeClippedSubviews`, tuned `initialNumToRender`/`maxToRenderPerBatch`. **No FlashList** by default (uniform cells = FlatList's strong case); swap in `@shopify/flash-list` only if real-device profiling stutters (named contingency). `@d11/react-native-fast-image` (my proven choice from past projects) for every thumb; page `GET /cards?limit=100` rather than loading all rows. Owned vs greyed = opacity toggle on the same image.
 
 **Binder:** **tap-to-place, not drag-and-drop** (explicit cut, stretch item). Tap empty slot → owned-unplaced picker → tap card → `PUT /binder/:page/:slot`.
 
@@ -233,7 +233,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 ### Phase 0 — App foundation
 - **M0 · Repo setup + living docs** (~0.5h) — in `pullday-app`: write this plan into `PLAN_README.md`, create `DECISIONS.md` + `AI.md` stubs, `.gitignore`.
   *Done:* docs present, first commit ready. → `chore: plan, decisions, ai docs`
-- **M1 · Scaffold + native linking** (~1h) — RN CLI app (match nivo versions, New Arch), strip theme, install + **link** `react-native-gesture-handler` + `react-native-reanimated` + `react-native-worklets` now (Stripe SDK deferred to win-back). App boots to a blank screen on a real iOS device.
+- **M1 · Scaffold + native linking** (~1h) — RN CLI app (match my standard dependency versions, New Arch), strip theme, install + **link** `react-native-gesture-handler` + `react-native-reanimated` + `react-native-worklets` now (Stripe SDK deferred to win-back). App boots to a blank screen on a real iOS device.
   *Done:* iOS pod build green, app launches on device. → `chore: scaffold app + native linking`
 - **M2 · Mock layer + navigation shell** (~1h) — `ApiClient` interface, `MockApiClient` + fixtures (~60 cards across rarities, mock user, in-memory streak/collection/freeze), bottom-tab nav (Home + Collection), auth stack, Zustand store, `colors.ts`.
   *Done:* tabs navigate; mock client returns data. → `feat: mock api layer + nav shell`
@@ -270,8 +270,8 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 
 ### Post-M4 fix pass (before M5)
 Review after M4 surfaced several real issues, fixed before moving on:
-- **Safe area** — screens weren't applying `useSafeAreaInsets()` top padding at all (content rendered under the status bar/notch). Fixed per-screen in each `<screen>.view.tsx`, matching nivo's manual-padding approach (not a wrapping `SafeAreaView`).
-- **Bottom tab icons** — added a minimal custom SVG icon set (`components/icons/Icon.tsx`, `react-native-svg`) matching nivo's own icon-system convention; wired into `BottomTabs.tsx`.
+- **Safe area** — screens weren't applying `useSafeAreaInsets()` top padding at all (content rendered under the status bar/notch). Fixed per-screen in each `<screen>.view.tsx`, matching my usual manual-padding approach (not a wrapping `SafeAreaView`).
+- **Bottom tab icons** — added a minimal custom SVG icon set (`components/icons/Icon.tsx`, `react-native-svg`) matching my own icon-system convention; wired into `BottomTabs.tsx`.
 - **Header** — new shared `AppHeader` component: "Pullday" + today's date (currently device time via a new `ApiClient.getServerTime()`; will reflect the real server clock once the backend exists in M9 — the day-boundary design in this doc doesn't change).
 - **Home layout reorder** — "Card Challenge" title top-left + streak top-right, then the swipeable card, then progress dots **below** the card (previously above) — matches the UI mockup's intended reading order.
 - **Real data everywhere** — see "Resolved: real data.sql obtained and parsed" above; `MOCK_CARDS` now is the real ~2,000-card catalog, not generated fixtures.
@@ -311,10 +311,10 @@ Three follow-ups on the Collection grid, all requested together:
 ---
 
 ## Risks
-1. **New Arch + reanimated v4/worklets + gesture-handler linking** → do `pod install --repo-update` + Metro cache clear at hour ~1, not hour 9. Diff against nivo's `ios/Podfile.lock` if versions clash.
+1. **New Arch + reanimated v4/worklets + gesture-handler linking** → do `pod install --repo-update` + Metro cache clear at hour ~1, not hour 9. Diff against my own known-good `Podfile.lock` if versions clash.
 2. **`@stripe/stripe-react-native` native linking** (own CocoaPods dep + Info.plist keys) → dedicated slot when win-back is tackled.
 3. **Free Apple ID 7-day signing expiry** → most likely "worked yesterday, won't launch now" before the call.
-4. **CocoaPods/Xcode version drift** vs RN 0.87 → nivo's `ios/` is the reference.
+4. **CocoaPods/Xcode version drift** vs RN 0.87 → my own prior `ios/` setup is the reference.
 5. **Rarity enum mismatch** → caught only by the `data.sql` inspection in M8; a 4th value or different casing breaks the swipe→rarity mapping + DB CHECK.
 6. **UIScene lifecycle requirement** — hit in M1 on this Xcode/iOS SDK: the stock RN AppDelegate creates its own window directly, which this SDK refuses to launch. Fixed with a SceneDelegate + UIApplicationSceneManifest in Info.plist. Likely applies on the real device build too; already handled, just noting it so it isn't mistaken for a new bug later.
 7. **Pod deployment-target conflicts** — hit in M2 when AsyncStorage's resource-bundle pod shipped `IPHONEOS_DEPLOYMENT_TARGET 13.0`, below what this SDK allows. Fixed with a `post_install` loop in the Podfile that bumps any pod target below `min_ios_version_supported`. Any future pod could reintroduce this; check this fix is still in the Podfile if a new native dependency's build fails with a deployment-target error.

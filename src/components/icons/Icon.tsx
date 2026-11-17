@@ -8,8 +8,7 @@ interface IconProps {
   color: string;
 }
 
-// Minimal custom SVG icon set, matching nivo's own icon-system convention
-// (react-native-svg, no vector-icons font).
+// Minimal custom SVG icon set (react-native-svg, no vector-icons font).
 export function Icon({ name, size = 24, color }: IconProps) {
   return (
     <Svg
