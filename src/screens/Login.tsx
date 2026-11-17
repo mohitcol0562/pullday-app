@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { COLORS } from '../constants/colors';
 import { apiClient } from '../network';
@@ -8,6 +17,8 @@ import { useAuthStore } from '../store/useAuthStore';
 
 export function LoginScreen() {
   const { setSession } = useAuthStore();
+  const [email, setEmail] = useState(MOCK_EMAIL);
+  const [password, setPassword] = useState(MOCK_PASSWORD);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +26,7 @@ export function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { token, user } = await apiClient.login(MOCK_EMAIL, MOCK_PASSWORD);
+      const { token, user } = await apiClient.login(email, password);
       setSession(token, user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not log in');
@@ -25,20 +36,52 @@ export function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Pullday</Text>
-      <Text style={styles.subtitle}>Pull a card. Keep the streak.</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Pullday</Text>
+        <Text style={styles.subtitle}>Pull a card. Keep the streak.</Text>
+      </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View style={styles.form}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          placeholder="you@pullday.test"
+          placeholderTextColor={COLORS.textMuted}
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color={COLORS.background} />
-        ) : (
-          <Text style={styles.buttonText}>Log in</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
+          placeholder="Password"
+          placeholderTextColor={COLORS.textMuted}
+        />
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color={COLORS.background} />
+          ) : (
+            <Text style={styles.buttonText}>Log in</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.hint}>Defaults prefilled for the demo</Text>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -46,9 +89,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
   },
   title: {
     fontSize: 28,
@@ -59,24 +105,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textMuted,
     marginTop: 6,
-    marginBottom: 40,
+  },
+  form: {
+    width: '100%',
+  },
+  label: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
+  input: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: COLORS.text,
+    marginBottom: 16,
   },
   error: {
     color: COLORS.danger,
     fontSize: 13,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   button: {
-    width: '100%',
     height: 48,
     borderRadius: 10,
     backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
   },
   buttonText: {
     color: COLORS.background,
     fontSize: 16,
     fontWeight: '600',
+  },
+  hint: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 10,
   },
 });

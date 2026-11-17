@@ -23,3 +23,7 @@ Pinning typescript to nivo's exact 5.0.4 (done in M1 to match the reference proj
 Also hit a Cocoapods deployment-target conflict after adding @react-native-async-storage/async-storage: its resource-bundle target ships `IPHONEOS_DEPLOYMENT_TARGET = 13.0`, below the 15.0+ range this Xcode/SDK combo allows, so the build failed before even reaching app code. RN's own `react_native_post_install` helper doesn't touch resource-bundle targets, so added an explicit loop in the Podfile's `post_install` to bump any pod target below `min_ios_version_supported` up to it.
 
 Wrote the mock API layer, Zustand store, navigation shell, and three placeholder screens (Login/Home/Collection) directly rather than asking AI to design them from scratch, since the shapes were already decided in the plan — AI's role here was mostly typing speed and catching the two environment issues above. Verified the whole login → tabs → mock-data loop on the iOS Simulator by hand (tap coordinates had to be found empirically — the simulator control tool's points-to-pixel scaling was easy to get wrong by eye, and a few taps landed on the wrong element before the right coordinates were found).
+
+## M3 — login screen
+
+Replaced the placeholder single-button login with real email/password fields, prefilled with the mock test account. No new environment issues this milestone. Verified on-device: prefilled fields log straight in, and — already proven as a side effect of testing M2 — the session survives a full app relaunch (not just a JS reload) via the persisted Zustand store.

@@ -9,7 +9,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | M0 | Repo setup + docs | done |
 | M1 | Scaffold + native linking | done |
 | M2 | Mock layer + navigation shell | done |
-| M3 | Login | pending |
+| M3 | Login | done |
 | M4 | Home: card render + swipe | pending |
 | M5 | Collection tab | pending |
 | M6 | Streak (timer-based) | pending |
