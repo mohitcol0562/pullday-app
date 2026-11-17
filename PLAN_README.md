@@ -7,7 +7,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Repo setup + docs | done |
-| M1 | Scaffold + native linking | pending |
+| M1 | Scaffold + native linking | done |
 | M2 | Mock layer + navigation shell | pending |
 | M3 | Login | pending |
 | M4 | Home: card render + swipe | pending |
@@ -278,6 +278,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 3. **Free Apple ID 7-day signing expiry** → most likely "worked yesterday, won't launch now" before the call.
 4. **CocoaPods/Xcode version drift** vs RN 0.87 → nivo's `ios/` is the reference.
 5. **Rarity enum mismatch** → caught only by the `data.sql` inspection in M8; a 4th value or different casing breaks the swipe→rarity mapping + DB CHECK.
+6. **UIScene lifecycle requirement** — hit in M1 on this Xcode/iOS SDK: the stock RN AppDelegate creates its own window directly, which this SDK refuses to launch. Fixed with a SceneDelegate + UIApplicationSceneManifest in Info.plist. Likely applies on the real device build too; already handled, just noting it so it isn't mistaken for a new bug later.
 
 ---
 
