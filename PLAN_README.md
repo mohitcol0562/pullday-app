@@ -8,7 +8,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 |---|---|---|
 | M0 | Repo setup + docs | done |
 | M1 | Scaffold + native linking | done |
-| M2 | Mock layer + navigation shell | pending |
+| M2 | Mock layer + navigation shell | done |
 | M3 | Login | pending |
 | M4 | Home: card render + swipe | pending |
 | M5 | Collection tab | pending |
@@ -279,6 +279,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 4. **CocoaPods/Xcode version drift** vs RN 0.87 → nivo's `ios/` is the reference.
 5. **Rarity enum mismatch** → caught only by the `data.sql` inspection in M8; a 4th value or different casing breaks the swipe→rarity mapping + DB CHECK.
 6. **UIScene lifecycle requirement** — hit in M1 on this Xcode/iOS SDK: the stock RN AppDelegate creates its own window directly, which this SDK refuses to launch. Fixed with a SceneDelegate + UIApplicationSceneManifest in Info.plist. Likely applies on the real device build too; already handled, just noting it so it isn't mistaken for a new bug later.
+7. **Pod deployment-target conflicts** — hit in M2 when AsyncStorage's resource-bundle pod shipped `IPHONEOS_DEPLOYMENT_TARGET 13.0`, below what this SDK allows. Fixed with a `post_install` loop in the Podfile that bumps any pod target below `min_ios_version_supported`. Any future pod could reintroduce this; check this fix is still in the Podfile if a new native dependency's build fails with a deployment-target error.
 
 ---
 
