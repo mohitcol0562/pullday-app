@@ -10,7 +10,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | M1 | Scaffold + native linking | done |
 | M2 | Mock layer + navigation shell | done |
 | M3 | Login | done |
-| M4 | Home: card render + swipe | pending |
+| M4 | Home: card render + swipe | done |
 | M5 | Collection tab | pending |
 | M6 | Streak (timer-based) | pending |
 | M7 | Streak-freeze buy screen | pending |
@@ -41,10 +41,15 @@ We build a trimmed but correct slice: the daily 8-card swipe challenge, streak s
   - App: `https://github.com/mohitcol0562/pullday-app`
   - Backend: `https://github.com/mohitcol0562/pullday-be`
 - **No theme system at all** — single flat palette (`colors.ts`), no light/dark, no `AppearanceProvider`; stripped from the start. Mockups aim for *clean + intuitive, minimal styling* — not heavily designed.
-- **Swipe challenge uses `rn-swiper-list`** (github.com/Skipperlla/rn-swiper-list, MIT) instead of a hand-rolled gesture component.
+- **Swipe challenge**: started with `rn-swiper-list` (github.com/Skipperlla/rn-swiper-list, MIT) to avoid a hand-rolled gesture component; switched to a small custom gesture-handler + reanimated implementation in M4 after the library proved buggy under our stack (see M4 notes below).
 
-### Blocking prerequisite (do before any schema is written)
-The brief provides `data.sql` (~1,993 cards) but **not** `schema.sql` — you write the schema to match the data. **`data.sql` is not yet on this machine.** Hour 0 of Phase 3 = obtain `data.sql`, then grep the real `INSERT INTO cards (...)` column list and `SELECT DISTINCT rarity` to confirm the exact rarity enum spellings. The `CHECK (rarity IN ('common','rare','holo'))` below is a **working assumption to verify**, not a fact.
+### Resolved: real data.sql obtained and parsed (ahead of schedule)
+Originally flagged as a blocking prerequisite for M8. Obtained from the gist's raw-file link during the post-M4 fix pass and parsed early, since the app moved to using real data immediately instead of generated fixtures. Confirmed facts (no longer assumptions):
+- 1,993 rows across **10 separate `insert into cards (...) values ...;` statements** (not one big statement — a parsing gotcha, see AI.md).
+- Columns exactly: `id, game, set_name, card_name, card_number, year, variety, grader, cert_number, grade, rarity, price_cents, population, story, image_url, price_history` (jsonb array of `{date, price_cents}`, 13 weekly points).
+- `rarity` is exactly `'common' | 'rare' | 'holo'` — confirmed by direct query (1,486 common / 314 rare / 193 holo). The `CHECK` constraint planned for `schema.sql` in M8 is now a confirmed fact, not a guess.
+- Games present: `onepiece`, `pokemon`. Real card names, sets, PSA grades, cert numbers, CloudFront/Arweave image URLs — this is genuine synthetic-but-realistic data, not placeholder text.
+- Source files: `data-source/data.sql` (as given) + `data-source/parse_cards.py` (one-time SQL→JSON parser, respects `''`-escaped quotes) → output copied to `src/network/data/cards.json` (2.5MB, bundled into the app for now). `schema.prisma`/`schema.sql` in M8 can be written directly from this, no more guessing.
 
 ---
 
@@ -79,24 +84,36 @@ The app talks to one `ApiClient` interface from day one. Behind it, a **`MockApi
 
 ### App (`pullday-app`)
 
-**Conventions borrowed from nivo** (near-zero cost): `SCREENS` enum + typed `RootStackParamList`; one global Zustand store from domain slices with `persist`+AsyncStorage+`partialize`; `ApiClient` class with JWT interceptor; `useBootstrapAccount` boot pattern; plain `StyleSheet.create`.
+**Conventions borrowed from nivo** (reinstated after initial feedback — see AI.md): each screen is a **folder** with `index.ts` (re-exports the container), `<screen>.container.tsx` (owns state/hooks/handlers), `<screen>.view.tsx` (pure presentation, typed via `type.ts`), `styles.ts` (static `StyleSheet.create`, no theme hook since there's no theme system), and `utils/use<Thing>Query.ts` for each data-fetching call.
 
-**Deliberately cut from nivo** (state in DECISIONS.md): container/view screen split (use single `ScreenName.tsx`); **theme system / dark mode / `AppearanceProvider` — removed entirely, single flat palette only**; `verticalScale`/`horizontalScale`; `APP_TEXT` copy centralization. Not graded, not worth the hours.
+**The query-hook contract, exactly** (corrected twice on review — see AI.md, don't drift from this):
+- The hook owns `data`/`error`/`isLoading` state (`useState`, no `useEffect`, no generic wrapper, no `alive`/cancellation ref) and exposes **one named async action** that performs the call and updates that state — e.g. `fetchHomeData`, `fetchOwnedCards`, `fetchServerDate`. Never a generic `refetch`/`fetch` name; name it after what it fetches.
+- The hook **never fetches on its own.** No `useEffect(() => { fetchX() }, [])` inside the hook itself. Calling it is entirely up to whoever consumes it.
+- The **container** (or, for a shared non-screen piece like `AppHeader`, the component itself) decides *when* to call it — typically its own `useEffect(() => { fetchX(); }, [])` right after destructuring the hook. This is the one place that `useEffect` is allowed to appear for this purpose.
+- The container checks `error` itself (`if (error) { /* show error popup */ }` — a stub today, a real popup once there's a design for it) rather than the hook swallowing or logging it.
+
+Also: `SCREENS` enum + typed `RootStackParamList`; one global Zustand store from domain slices with `persist`+AsyncStorage+`partialize`; `ApiClient` class; plain `StyleSheet.create`; custom SVG icon set via `react-native-svg` (not a vector-icons font) for the bottom tab bar.
+
+**Still cut from nivo**: theme system / dark mode / `AppearanceProvider` — single flat palette only; `verticalScale`/`horizontalScale`; `APP_TEXT` copy centralization. Not graded, not worth the hours.
 
 ```
 pullday-app/src/
 ├── constants/   screens.ts, colors.ts (single flat palette, no theming)
-├── navigation/   RootNavigator.tsx (auth stack + BottomTabs), BottomTabs.tsx, types.ts
+├── navigation/   RootNavigator.tsx (auth stack + BottomTabs), BottomTabs.tsx (with tab icons), types.ts
 ├── network/
 │   ├── ApiClient.ts         # interface both clients implement
 │   ├── MockApiClient.ts     # fixtures-backed (Phase 1)
 │   ├── HttpApiClient.ts     # real backend (Phase 2 swap)
-│   └── mock/                # cards.ts, user.ts, state.ts fixtures
-├── screens/      Login, Home(swipe), Collection, CardDetail, Streak, ShopFreeze, DevMenu
-├── components/   ChallengeSwiper.tsx (wraps rn-swiper-list), CardFace.tsx, RevealOverlay.tsx, CardThumb.tsx, StreakTimer.tsx
-├── store/        storageService.ts, useAuthStore.ts, useCollectionStore.ts, useStreakStore.ts
+│   ├── data/cards.json      # real ~2,000-card catalog, parsed from data.sql once
+│   └── mock/                # cards.ts (loads data/cards.json), user.ts
+├── screens/
+│   ├── login/     index.ts, login.container.tsx, login.view.tsx, type.ts, styles.ts
+│   ├── home/       index.ts, home.container.tsx, home.view.tsx, type.ts, styles.ts, utils/useHomeDataQuery.ts
+│   └── collection/ index.ts, collection.container.tsx, collection.view.tsx, type.ts, styles.ts, utils/useCollectionQuery.ts
+├── components/   AppHeader.tsx, ChallengeSwiper.tsx, SwipeCard.tsx, CardFace.tsx, RarityOverlayLabel.tsx, RevealOverlay.tsx, icons/Icon.tsx
+├── store/        storageService.ts, useAuthStore.ts, useCollectionStore.ts
 ├── services/     fakeStore.ts (fake IAP for freeze), stripe.ts (win-back, later)
-├── hooks/        useBootstrapAccount.ts, useAppStateSync.ts, useFetch.ts
+├── hooks/        useBootstrapAccount.ts, useServerDate.ts (own data/error/isLoading state, no generic wrapper)
 └── devtools/     (hidden-gesture dev menu entry)
 ```
 
@@ -184,13 +201,13 @@ All logic server-side only (client-side streak math is how v1 broke). **Lazy che
 
 **State:** Zustand one store. Persisted: `authSlice` (token/user), `collectionSlice` (owned card ids — survives app kill, fixes bug #3 surface). Everything state-machine-authoritative (today's challenge, streak status, catalog, binder) is **server-fetched on focus, not cached** once a real backend exists — caching it is how stale-state bugs happen. Thin `useFetch(url)` hook, no React Query.
 
-**Swipe challenge — use `rn-swiper-list`** (github.com/Skipperlla/rn-swiper-list, MIT): a reanimated + gesture-handler Tinder-style swiper. This removes the riskiest hand-rolled piece and still addresses bugs #5/#6 if wired carefully.
-- Install: `rn-swiper-list` + peer deps `react-native-reanimated`, `react-native-gesture-handler`, `react-native-worklets` (all already in the nivo stack). Screen wrapped in `GestureHandlerRootView` (already our App root pattern).
-- `ChallengeSwiper.tsx` wraps `<Swiper>` with `data` = the 8 challenge cards, `renderCard` = `CardFace`. Mapping: **`onSwipeLeft` → common, `onSwipeRight` → rare, `onSwipeTop` → holo**; set `disableBottomSwipe`. Each callback gets the card index → record the guess, compare to that card's local `rarity` for instant correct/incorrect.
-- Overlay labels `OverlayLabelLeft/Right/Top` show "COMMON / RARE / HOLO" while dragging (the swipe-hint legend in the mockup), tuned via the `*OpacityRange` props.
-- Guard double-submit at the data layer: each card index answered once (idempotent in the mock/HTTP client), so a fast re-swipe during the exit animation can't double-count. `onSwipedAll` → trigger completion + reveal.
-- **Reveal overlay (`RevealOverlay.tsx`)** stays our own: a separate unmounted-until-needed component; prefetch the reward card's `image_url` via FastImage the moment completion fires, before animating — no synchronous image decode on the JS thread during animation (fixes bug #6).
-- Keep a thin wrapper (not `<Swiper>` scattered across the screen) so if the library misbehaves on a real device we can swap the internals without touching `Home`.
+**Swipe challenge — custom implementation** (switched off `rn-swiper-list` in M4 after it proved buggy — see below):
+- `SwipeCard.tsx`: one card, one `react-native-gesture-handler` `Gesture.Pan`, driving `translateX`/`translateY` shared values via reanimated — all transform math on the UI thread, no per-frame `useState`. On release, classifies by displacement into left=common / right=rare / up=holo (threshold-based), or snaps back. A `hasAnswered` shared value guards against double-firing mid-exit-animation.
+- `ChallengeSwiper.tsx`: thin wrapper that just tracks which of the 8 cards is active (`useState` index) and swaps in the next one on answer — no prerendered stack, no third-party library.
+- Overlay labels (`RarityOverlayLabel`) fade in during the drag based on `translateX`/`translateY`, same visual effect as originally planned.
+- Idempotency still lives at the data layer (mock/HTTP client rejects a re-answer of the same card id), so a double-fire can't double-count even if the UI guard somehow failed.
+- **Reveal overlay (`RevealOverlay.tsx`)** unchanged: a separate unmounted-until-needed component; prefetches the reward card's image before animating in.
+- **Why the switch:** `rn-swiper-list` rendered card 1 correctly but every card from index 1 onward stayed invisible after the first swipe — reproduced on multiple fresh launches, in multiple swipe directions, and a smaller `prerenderItems` didn't fix it. The plan's own risk section anticipated this ("if the library misbehaves... swap the internals without touching Home") — that's exactly what happened. The custom version is simpler than the library (one active card, not a stack) and fully verified working end-to-end on-device.
 
 **Collection (~2000 items, fixes bug #4):** plain `FlatList` 3-col grid with `getItemLayout` (fixed cells), `windowSize={5}`, `removeClippedSubviews`, tuned `initialNumToRender`/`maxToRenderPerBatch`. **No FlashList** by default (uniform cells = FlatList's strong case); swap in `@shopify/flash-list` only if real-device profiling stutters (named contingency). `@d11/react-native-fast-image` (nivo-proven) for every thumb; page `GET /cards?limit=100` rather than loading all rows. Owned vs greyed = opacity toggle on the same image.
 
@@ -216,16 +233,16 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 ### Phase 0 — App foundation
 - **M0 · Repo setup + living docs** (~0.5h) — in `pullday-app`: write this plan into `PLAN_README.md`, create `DECISIONS.md` + `AI.md` stubs, `.gitignore`.
   *Done:* docs present, first commit ready. → `chore: plan, decisions, ai docs`
-- **M1 · Scaffold + native linking** (~1h) — RN CLI app (match nivo versions, New Arch), strip theme, install + **link** `react-native-gesture-handler` + `react-native-reanimated` + `react-native-worklets` + `rn-swiper-list` now (Stripe SDK deferred to win-back). App boots to a blank screen on a real iOS device.
-  *Done:* iOS pod build green, app launches on device, swiper lib imports clean. → `chore: scaffold app + native linking`
+- **M1 · Scaffold + native linking** (~1h) — RN CLI app (match nivo versions, New Arch), strip theme, install + **link** `react-native-gesture-handler` + `react-native-reanimated` + `react-native-worklets` now (Stripe SDK deferred to win-back). App boots to a blank screen on a real iOS device.
+  *Done:* iOS pod build green, app launches on device. → `chore: scaffold app + native linking`
 - **M2 · Mock layer + navigation shell** (~1h) — `ApiClient` interface, `MockApiClient` + fixtures (~60 cards across rarities, mock user, in-memory streak/collection/freeze), bottom-tab nav (Home + Collection), auth stack, Zustand store, `colors.ts`.
   *Done:* tabs navigate; mock client returns data. → `feat: mock api layer + nav shell`
 
 ### Phase 1 — Core functionality (on mock data)
 - **M3 · Login** (~0.5h) — login screen with **default email + password prefilled**, validates against mock user, persists session, routes into the tabs.
   *Done:* prefilled creds log straight in; session survives restart. → `feat: login screen`
-- **M4 · Home: card render + swipe** (~2h) — the core. `ChallengeSwiper` wrapping `rn-swiper-list` (left=common/right=rare/up=holo, overlay labels, `disableBottomSwipe`), 8-card stack, immediate correct/incorrect, `RevealOverlay` on `onSwipedAll` (unlocks a mock card). **The highest-value piece.**
-  *Done:* smooth, reliable swipes on a real device; full 8-card run reveals a card. → `feat: home swipe challenge`
+- **M4 · Home: card render + swipe** (~2h, took longer — library swap) — the core. `ChallengeSwiper` + custom `SwipeCard` (left=common/right=rare/up=holo, overlay labels), one card at a time, immediate correct/incorrect, `RevealOverlay` on completion (unlocks a mock card). **The highest-value piece.** Started with `rn-swiper-list` per plan, hit a reproducible library bug (card 2+ never renders after first swipe), replaced with a small custom gesture-handler implementation — see AI.md.
+  *Done, verified on simulator:* full 8-card run through all three directions, accurate correct/incorrect feedback, streak 12→13, reveal overlay shows the unlocked card, Collection count updates 12→13. → `feat: home swipe challenge`
 - **M5 · Collection tab** (~1.5h) — tuned FlatList grid + FastImage, owned in color / unowned greyed, tap → `CardDetail` (art, set, grade, story, price-history sparkline). Newly unlocked card appears here.
   *Done:* grid scrolls smoothly; detail opens; unlocks reflected. → `feat: collection + card detail`
 - **M6 · Streak (timer-based)** (~1.5h) — `StreakTimer` component: current streak count + **live countdown to the next day boundary** (time left to keep the streak). Completing Home's challenge increments it; a mock "missed day" breaks it. Streak state in the mock layer, authoritative logic documented for later backend move.
@@ -251,7 +268,18 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 
 **Stretch / later (named cuts in DECISIONS.md):** win-back + Stripe (real-money path — add after core if time), binder screen, dev menu time-travel, Android, cloud deploy. Core loop (swipe → collection → streak → freeze) ships first and whole.
 
----
+### Post-M4 fix pass (before M5)
+Review after M4 surfaced several real issues, fixed before moving on:
+- **Safe area** — screens weren't applying `useSafeAreaInsets()` top padding at all (content rendered under the status bar/notch). Fixed per-screen in each `<screen>.view.tsx`, matching nivo's manual-padding approach (not a wrapping `SafeAreaView`).
+- **Bottom tab icons** — added a minimal custom SVG icon set (`components/icons/Icon.tsx`, `react-native-svg`) matching nivo's own icon-system convention; wired into `BottomTabs.tsx`.
+- **Header** — new shared `AppHeader` component: "Pullday" + today's date (currently device time via a new `ApiClient.getServerTime()`; will reflect the real server clock once the backend exists in M9 — the day-boundary design in this doc doesn't change).
+- **Home layout reorder** — "Card Challenge" title top-left + streak top-right, then the swipeable card, then progress dots **below** the card (previously above) — matches the UI mockup's intended reading order.
+- **Real data everywhere** — see "Resolved: real data.sql obtained and parsed" above; `MOCK_CARDS` now is the real ~2,000-card catalog, not generated fixtures.
+- **Hooks + container/view/styles/type split** — reinstated per feedback; see the App section above and AI.md for what changed and why.
+- **Gesture-area bug** — `ChallengeSwiper`'s arena View was missing `overflow: 'hidden'`, so the swipeable card's gesture area could still intercept touches intended for the bottom tab bar beneath it. Fixed by clipping both the arena and the screen's `challengeArea` wrapper.
+- **Query-hook contract corrected** — see the App section's "query-hook contract" box above; hooks expose one named fetch action and never self-trigger, the container calls it explicitly on mount.
+- **UI polish — card + tab bar need visible depth, not less.** First pass wrongly stripped border/shadow/radius entirely; corrected to the opposite: `CardFace` now has a soft drop shadow on an outer un-clipped wrapper (shadow would be clipped by the inner `overflow:'hidden'` view needed to round the image/footer) plus its hairline border and 18px radius; `BottomTabs`' tab bar has its top border and a subtle upward shadow. Rule of thumb for this app: flat palette, but real elements (cards, chrome) should still read as physically distinct via a soft shadow + hairline border, not literally flat.
+- **Game-type badge** — `CardFace` now shows a small badge over the top-left of the art ("One Piece" / "Pokémon", mapped from the raw `game` field) so the game is visible without opening card detail.
 
 ## Seed script (`pullday-be/scripts/seed.ts`, deterministic, one `TODAY` anchor, password `pullday123`)
 - `new@` — user only, no streak_state, no cards.
@@ -280,6 +308,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 5. **Rarity enum mismatch** → caught only by the `data.sql` inspection in M8; a 4th value or different casing breaks the swipe→rarity mapping + DB CHECK.
 6. **UIScene lifecycle requirement** — hit in M1 on this Xcode/iOS SDK: the stock RN AppDelegate creates its own window directly, which this SDK refuses to launch. Fixed with a SceneDelegate + UIApplicationSceneManifest in Info.plist. Likely applies on the real device build too; already handled, just noting it so it isn't mistaken for a new bug later.
 7. **Pod deployment-target conflicts** — hit in M2 when AsyncStorage's resource-bundle pod shipped `IPHONEOS_DEPLOYMENT_TARGET 13.0`, below what this SDK allows. Fixed with a `post_install` loop in the Podfile that bumps any pod target below `min_ios_version_supported`. Any future pod could reintroduce this; check this fix is still in the Podfile if a new native dependency's build fails with a deployment-target error.
+8. **Third-party swipe library bug** — materialized in M4: `rn-swiper-list`'s card stack stopped rendering past the first card under our exact RN/Reanimated/Worklets/New-Arch combo. Replaced with a custom `SwipeCard` (single active card, no prerendered stack). No longer a risk since the dependency is removed, but a reminder that third-party gesture libraries need real on-device verification before being trusted, not just a clean build.
 
 ---
 

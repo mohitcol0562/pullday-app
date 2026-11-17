@@ -1,5 +1,10 @@
 export type Rarity = 'common' | 'rare' | 'holo';
 
+export interface PricePoint {
+  date: string;
+  priceCents: number;
+}
+
 export interface Card {
   id: string;
   game: string;
@@ -7,11 +12,16 @@ export interface Card {
   name: string;
   number: string;
   year: number;
+  variety: string | null;
+  grader: string | null;
+  certNumber: string | null;
+  grade: number | null;
   rarity: Rarity;
   priceCents: number;
+  population: number | null;
   story: string;
   imageUrl: string;
-  priceHistory: number[];
+  priceHistory: PricePoint[];
 }
 
 export interface User {

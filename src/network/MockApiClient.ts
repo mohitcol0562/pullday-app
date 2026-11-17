@@ -100,6 +100,13 @@ export class MockApiClient implements ApiClient {
     return MOCK_USER;
   }
 
+  async getServerTime(): Promise<string> {
+    // No real backend yet — the device clock stands in for "server now".
+    // The real streak engine (M9) must never make this swap-in-place; it
+    // computes day boundaries from its own clock, not a client-supplied one.
+    return new Date().toISOString();
+  }
+
   async getTodayChallenge(): Promise<DailyChallenge> {
     this.runStreakCheck();
     const today = dateKey(new Date());
