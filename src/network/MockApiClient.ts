@@ -171,6 +171,10 @@ export class MockApiClient implements ApiClient {
     return Array.from(this.state.ownedCardIds);
   }
 
+  async getCards(): Promise<Card[]> {
+    return MOCK_CARDS;
+  }
+
   async getCard(cardId: string): Promise<Card> {
     const card = getMockCard(cardId);
     if (!card) {

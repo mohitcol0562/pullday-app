@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { SCREENS } from '../constants/screens';
+import { CardDetailContainer } from '../screens/cardDetail';
 import { LoginContainer } from '../screens/login';
 import { useAuthStore } from '../store/useAuthStore';
 import { BottomTabs } from './BottomTabs';
@@ -15,7 +16,10 @@ export function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isAuthed ? (
-        <Stack.Screen name={SCREENS.MAIN_TABS} component={BottomTabs} />
+        <>
+          <Stack.Screen name={SCREENS.MAIN_TABS} component={BottomTabs} />
+          <Stack.Screen name={SCREENS.CARD_DETAIL} component={CardDetailContainer} />
+        </>
       ) : (
         <Stack.Screen name={SCREENS.LOGIN} component={LoginContainer} />
       )}

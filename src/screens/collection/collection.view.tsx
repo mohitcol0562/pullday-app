@@ -1,12 +1,23 @@
-import { ActivityIndicator, Text, View } from 'react-native';
+import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader } from '../../components/AppHeader';
+import { CardThumb } from '../../components/CardThumb';
 import { COLORS } from '../../constants/colors';
+import { Card } from '../../network/types';
 import { styles } from './styles';
 import { CollectionViewProps } from './type';
 
-export function CollectionView({ ownedCount, totalCount, isLoading }: CollectionViewProps) {
+const COLUMNS = 3;
+
+export function CollectionView({
+  cards,
+  ownedIds,
+  ownedCount,
+  totalCount,
+  isLoading,
+  onCardPress,
+}: CollectionViewProps) {
   const { top } = useSafeAreaInsets();
 
   return (
@@ -18,13 +29,23 @@ export function CollectionView({ ownedCount, totalCount, isLoading }: Collection
         </Text>
       </View>
 
-      <View style={styles.centered}>
-        {isLoading ? (
+      {isLoading ? (
+        <View style={styles.centered}>
           <ActivityIndicator color={COLORS.text} />
-        ) : (
-          <Text style={styles.hint}>Card grid lands in M5.</Text>
-        )}
-      </View>
+        </View>
+      ) : (
+        <FlashList
+          data={cards}
+          keyExtractor={item => item.id}
+          numColumns={COLUMNS}
+          contentContainerStyle={styles.grid}
+          renderItem={({ item }: ListRenderItemInfo<Card>) => (
+            <TouchableOpacity style={styles.cellWrapper} onPress={() => onCardPress(item.id)}>
+              <CardThumb imageUrl={item.imageUrl} owned={ownedIds.has(item.id)} />
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </View>
   );
 }

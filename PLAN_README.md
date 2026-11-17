@@ -11,7 +11,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | M2 | Mock layer + navigation shell | done |
 | M3 | Login | done |
 | M4 | Home: card render + swipe | done |
-| M5 | Collection tab | pending |
+| M5 | Collection tab | done |
 | M6 | Streak (timer-based) | pending |
 | M7 | Streak-freeze buy screen | pending |
 | M8 | Backend scaffold + schema (`pullday-be`) | pending |
@@ -244,7 +244,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 - **M4 · Home: card render + swipe** (~2h, took longer — library swap) — the core. `ChallengeSwiper` + custom `SwipeCard` (left=common/right=rare/up=holo, overlay labels), one card at a time, immediate correct/incorrect, `RevealOverlay` on completion (unlocks a mock card). **The highest-value piece.** Started with `rn-swiper-list` per plan, hit a reproducible library bug (card 2+ never renders after first swipe), replaced with a small custom gesture-handler implementation — see AI.md.
   *Done, verified on simulator:* full 8-card run through all three directions, accurate correct/incorrect feedback, streak 12→13, reveal overlay shows the unlocked card, Collection count updates 12→13. → `feat: home swipe challenge`
 - **M5 · Collection tab** (~1.5h) — tuned FlatList grid + FastImage, owned in color / unowned greyed, tap → `CardDetail` (art, set, grade, story, price-history sparkline). Newly unlocked card appears here.
-  *Done:* grid scrolls smoothly; detail opens; unlocks reflected. → `feat: collection + card detail`
+  *Done, verified on simulator:* real-data 3-column grid scrolls smoothly (removeClippedSubviews + fixed `getItemLayout`); owned (first 12) render full color, unowned dimmed via opacity; tapping any card navigates to `CardDetail` with real name/set/number/year, rarity badge, grade/population/current-price stats, a working 13-week `PriceSparkline`, and story text; Back returns to Collection. Added `ApiClient.getCards()` (mock returns the full real catalog), `CardThumb` (FastImage-backed grid cell), `useCardsQuery`, and the full `cardDetail/` screen folder (container/view/type/styles/utils, same query-hook contract as the rest of the app). → `feat: collection + card detail`
 - **M6 · Streak (timer-based)** (~1.5h) — `StreakTimer` component: current streak count + **live countdown to the next day boundary** (time left to keep the streak). Completing Home's challenge increments it; a mock "missed day" breaks it. Streak state in the mock layer, authoritative logic documented for later backend move.
   *Done:* timer counts down live; completing challenge bumps streak; miss breaks it. → `feat: streak timer`
 
@@ -280,6 +280,16 @@ Review after M4 surfaced several real issues, fixed before moving on:
 - **Query-hook contract corrected** — see the App section's "query-hook contract" box above; hooks expose one named fetch action and never self-trigger, the container calls it explicitly on mount.
 - **UI polish — card + tab bar need visible depth, not less.** First pass wrongly stripped border/shadow/radius entirely; corrected to the opposite: `CardFace` now has a soft drop shadow on an outer un-clipped wrapper (shadow would be clipped by the inner `overflow:'hidden'` view needed to round the image/footer) plus its hairline border and 18px radius; `BottomTabs`' tab bar has its top border and a subtle upward shadow. Rule of thumb for this app: flat palette, but real elements (cards, chrome) should still read as physically distinct via a soft shadow + hairline border, not literally flat.
 - **Game-type badge** — `CardFace` now shows a small badge over the top-left of the art ("One Piece" / "Pokémon", mapped from the raw `game` field) so the game is visible without opening card detail.
+
+### M5 fix: CardDetail safe area
+`cardDetail.view.tsx` was the one screen still missing `useSafeAreaInsets()` — its "‹ Back" header rendered flush under the status bar/notch. Fixed the same way as Home/Collection: `const { top } = useSafeAreaInsets()`, applied as `paddingTop: top` on the screen container (plus a little extra breathing room directly on `styles.header`). Verified on-device: header now clears the notch, and the full Collection → CardDetail → Back round-trip works.
+
+### M5 fix: Collection grid loading state, caching, virtualization
+Three follow-ups on the Collection grid, all requested together:
+- **Per-thumb loading state** — `CardThumb` now owns its own `isLoading` state (`onLoadStart`/`onLoad` on the `FastImage`) and shows a small `ActivityIndicator` over the cell until the image has actually decoded, instead of popping in abruptly.
+- **Explicit FastImage caching** — the `source` now sets `cache: FastImage.cacheControl.immutable`, since these card images never change once published; previously no cache policy was set (FastImage's default is a weaker `web` policy that revalidates).
+- **FlatList → `@shopify/flash-list`** — swapped the grid's `FlatList` for `FlashList` (v2) to fix visible blank cells during fast scrolling, a real virtualization artifact of `FlatList`'s own recycling at this row count. FlashList v2 has no native/pod dependency and needs no `estimatedItemSize`/`getItemLayout` — it measures and recycles automatically, so `collection.view.tsx` got simpler, not more complex (manual `cellWidth`/`cellHeight` math and `getItemLayout` were removed entirely). Verified on-device: real images render with owned/unowned dimming, no blank cells.
+- **Same loader on `CardDetail`'s hero image** — that screen was still using plain RN `Image` with no cache policy. Switched it to `FastImage` with the identical loading-overlay + `cacheControl.immutable` pattern as `CardThumb`, so the big image gets the same spinner-while-loading and caching behavior as the grid thumbnails.
 
 ## Seed script (`pullday-be/scripts/seed.ts`, deterministic, one `TODAY` anchor, password `pullday123`)
 - `new@` — user only, no streak_state, no cards.

@@ -16,6 +16,7 @@ export interface ApiClient {
   getTodayChallenge(): Promise<DailyChallenge>;
   submitAnswer(cardId: string, guess: Rarity): Promise<AnswerResult>;
   getCollection(): Promise<string[]>;
+  getCards(): Promise<Card[]>;
   getCard(cardId: string): Promise<Card>;
   getStreak(): Promise<StreakStatus>;
   purchaseFreeze(idempotencyKey: string): Promise<PurchaseResult>;

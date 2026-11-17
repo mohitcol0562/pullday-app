@@ -33,4 +33,12 @@ export const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 12,
   },
+  grid: {
+    paddingHorizontal: 11,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  cellWrapper: {
+    flex: 1,
+  },
 });
