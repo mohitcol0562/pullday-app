@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'react-native';
 
+import { SCREENS } from '../../constants/screens';
+import { RootStackParamList } from '../../navigation/types';
 import { apiClient } from '../../network';
 import { Card, Rarity } from '../../network/types';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +13,7 @@ import { HomeFeedback } from './type';
 import { useHomeDataQuery } from './utils/useHomeDataQuery';
 
 export function HomeContainer() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { clearSession } = useAuthStore();
   const { data, isLoading, error, fetchHomeData } = useHomeDataQuery();
   const [answeredCount, setAnsweredCount] = useState(0);
@@ -65,6 +70,7 @@ export function HomeContainer() {
       onSwipedAll={() => {}}
       onDismissReveal={() => setRevealCard(null)}
       onStreakDayRollover={fetchHomeData}
+      onOpenShop={() => navigation.navigate(SCREENS.SHOP_FREEZE)}
       onLogout={clearSession}
     />
   );

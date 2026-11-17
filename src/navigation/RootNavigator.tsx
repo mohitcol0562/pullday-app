@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SCREENS } from '../constants/screens';
 import { CardDetailContainer } from '../screens/cardDetail';
 import { LoginContainer } from '../screens/login';
+import { ShopFreezeContainer } from '../screens/shopFreeze';
 import { useAuthStore } from '../store/useAuthStore';
 import { BottomTabs } from './BottomTabs';
 import { RootStackParamList } from './types';
@@ -19,6 +20,7 @@ export function RootNavigator() {
         <>
           <Stack.Screen name={SCREENS.MAIN_TABS} component={BottomTabs} />
           <Stack.Screen name={SCREENS.CARD_DETAIL} component={CardDetailContainer} />
+          <Stack.Screen name={SCREENS.SHOP_FREEZE} component={ShopFreezeContainer} />
         </>
       ) : (
         <Stack.Screen name={SCREENS.LOGIN} component={LoginContainer} />

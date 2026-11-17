@@ -23,6 +23,7 @@ export function HomeView({
   onSwipedAll,
   onDismissReveal,
   onStreakDayRollover,
+  onOpenShop,
   onLogout,
 }: HomeViewProps) {
   const { top } = useSafeAreaInsets();
@@ -37,7 +38,7 @@ export function HomeView({
 
   return (
     <View style={[styles.container, { paddingTop: top + 12 }]}>
-      <AppHeader />
+      <AppHeader onOpenShop={onOpenShop} />
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Card Challenge</Text>

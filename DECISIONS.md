@@ -34,6 +34,10 @@ I corrected this twice before AI's implementation matched the convention I requi
 
 My call to source the assignment's actual `data.sql` (I located and provided the link) and have it parsed to JSON (`data-source/parse_cards.py`) instead of continuing with generated placeholder cards. The app runs against the real ~1,993-card catalog (real names, sets, PSA grades, CloudFront image URLs) from the first swipe onward, not just once a backend exists. This also resolved the earlier "schema unknown until M8" blocker early — see `PLAN_README.md` for the confirmed column list and rarity values.
 
+## Fake store for the streak-freeze purchase
+
+My call to simulate the purchase client-side (`src/services/fakeStore.ts`: an artificial delay plus an 80/20 succeed/fail split) rather than integrate a real IAP SDK during the mock-data phase — this app never touches App Store Connect or Google Play Billing, and doesn't need to yet, since the point of M7 is proving the state machine (pending/succeeded/failed/cancelled, freeze count capped at 2) works end to end. A real IAP integration is deferred to whenever this app actually ships to a store.
+
 ## Known broken
 
 Nothing currently known broken. A card-gesture/tab-bar touch conflict (swiping could accidentally fire when tapping near the bottom tab bar) was found during my own post-M4 review and fixed — see `PLAN_README.md`'s "Post-M4 fix pass".

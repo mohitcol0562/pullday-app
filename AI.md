@@ -26,6 +26,14 @@ To be direct about scope: AI was used as an implementation tool, building to arc
 - **CardDetail safe-area miss** — the one screen that didn't get the safe-area guideline applied to every other screen; its back button rendered under the notch. I caught this during M5 verification and had it fixed the same way as the rest.
 - **Simulator automation flakiness (M5/M6 testing)** — plain taps stopped registering on standard buttons mid-session while swipe gestures kept working; a tooling issue, not an app bug, worked around with a full rebuild/relaunch and the `touch_path` action instead of `tap`.
 
+## M7 — streak-freeze buy screen
+
+Built the `ShopFreeze` screen folder to the same container/view/type/styles/utils contract as every other screen, plus `src/services/fakeStore.ts` — a small module that stands in for a real IAP SDK: an artificial delay and an 80/20 succeed/fail split, with no real payment provider involved. Added a shared `MAX_FREEZES`/`FREEZE_PRICE_CENTS` constant file so the UI and `MockApiClient` read the same numbers instead of duplicating the magic value `2`. Added a `❄️ Freezes` entry point to `AppHeader` (only rendered when a handler is passed, so other screens using `AppHeader` aren't affected) and registered `ShopFreeze` as a root-stack screen, same pattern as `CardDetail`.
+
+Verified the full purchase flow on-device, state by state: tapped Buy, watched it go pending (spinner, Cancel button visible), landed on the failed banner on the first attempt (an actual 1-in-5 roll, not staged) and the succeeded banner on the next, with "Freezes owned" updating from the real mock-server count each time (0/2 → 1/2 → 2/2) and the Buy button correctly disabling to "Max freezes owned" once at the cap. Back returned cleanly to Home afterward.
+
+Did not independently re-verify the cancel path or "a held freeze auto-consumes a missed day" with a live test this pass — the cap was hit during the purchase-flow testing above, and the missed-day path is the same pre-existing `runStreakCheck` logic already noted as not independently day-skip-tested in M6. Worth being consistent about this boundary rather than claiming more verification than happened.
+
 ## Decisions I made (not AI)
 
 Full list and reasoning in `DECISIONS.md`. Summary: what to build first (swipe → collection → streak → freeze, core loop before monetization), what to cut for the time box (no theme system, no dev-menu time travel, binder and win-back deferred as named stretch items), the two-repo tradeoff against the brief's literal "one repo" wording, and sourcing the real `data.sql` instead of continuing with synthetic fixtures. These are the judgment calls the brief says it's grading, and they're mine — product and scope decisions, not things a model decided on its own.

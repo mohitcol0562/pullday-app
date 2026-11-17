@@ -1,3 +1,4 @@
+import { MAX_FREEZES } from '../constants/freeze';
 import { ApiClient } from './ApiClient';
 import { MOCK_CARDS, getMockCard } from './mock/cards';
 import { MOCK_EMAIL, MOCK_PASSWORD, MOCK_USER } from './mock/user';
@@ -13,7 +14,6 @@ import {
   User,
 } from './types';
 
-const MAX_FREEZES = 2;
 const CHALLENGE_SIZE = 8;
 
 function dateKey(date: Date): string {

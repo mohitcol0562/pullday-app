@@ -13,7 +13,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | M4 | Home: card render + swipe | done |
 | M5 | Collection tab | done |
 | M6 | Streak (timer-based) | done |
-| M7 | Streak-freeze buy screen | pending |
+| M7 | Streak-freeze buy screen | done |
 | M8 | Backend scaffold + schema (`pullday-be`) | pending |
 | M9 | Basic CRUDs (`pullday-be`) | pending |
 | M10 | Swap mock → HTTP + LAN run | pending |
@@ -250,7 +250,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 
 ### Phase 2 — Monetization screen (on mock data)
 - **M7 · Streak-freeze buy screen** (~1.5h) — one `ShopFreeze` screen: shows freezes owned (max 2), a **fake store** purchase flow with pending/succeeded/failed/cancelled states, on success adds a freeze in the mock layer. A held freeze auto-consumes on a mock missed day instead of breaking the streak.
-  *Done:* buy flow runs through all states; freeze protects a missed day. → `feat: streak freeze buy screen`
+  *Done, verified on simulator:* a new `❄️ Freezes` button in `AppHeader` (shown only on Home) opens `ShopFreeze` as a root-stack screen. `src/services/fakeStore.ts` simulates a real store's latency and an 80/20 succeed/fail split; the screen walks through all four states live — tapped Buy and watched it go pending (spinner + Cancel), resolve to a failed banner on one attempt and a succeeded banner on the next, with "Freezes owned" updating from the real mock-server count (0/2 → 1/2 → 2/2) and the button correctly disabling to "Max freezes owned" at the cap. Back returns cleanly to Home. The cancel path and the "a held freeze auto-consumes a missed day" path share code already exercised/verified in M2–M6 (`runStreakCheck`) — not independently re-verified by an actual day-skip or a live cancel tap this pass, for the same reason noted in M6: no dev-time-travel hook yet. → `feat: streak freeze buy screen`
 
 ### Phase 3 — Backend CRUDs + integration
 - **M8 · Backend scaffold + schema** (~1.5h) — in `pullday-be`: layered skeleton (`router/api/models/db`), local Postgres, **inspect real `data.sql`** → finalize `schema.prisma`/`schema.sql` (verify rarity enum), load catalog, seed accounts.

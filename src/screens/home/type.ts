@@ -19,5 +19,6 @@ export interface HomeViewProps {
   onSwipedAll: () => void;
   onDismissReveal: () => void;
   onStreakDayRollover: () => void;
+  onOpenShop: () => void;
   onLogout: () => void;
 }
