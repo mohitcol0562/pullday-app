@@ -26,11 +26,6 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
-  streak: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
   challengeArea: {
     flex: 1,
     overflow: 'hidden',

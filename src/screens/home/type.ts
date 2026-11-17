@@ -8,6 +8,7 @@ export interface HomeFeedback {
 export interface HomeViewProps {
   isLoading: boolean;
   currentStreak: number;
+  secondsUntilNextDay: number;
   totalCount: number;
   answeredCount: number;
   completedToday: boolean;
@@ -17,5 +18,6 @@ export interface HomeViewProps {
   onAnswer: (card: Card, guess: Rarity) => void;
   onSwipedAll: () => void;
   onDismissReveal: () => void;
+  onStreakDayRollover: () => void;
   onLogout: () => void;
 }

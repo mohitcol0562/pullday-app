@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/AppHeader';
 import { ChallengeSwiper } from '../../components/ChallengeSwiper';
 import { RevealOverlay } from '../../components/RevealOverlay';
+import { StreakTimer } from '../../components/StreakTimer';
 import { COLORS } from '../../constants/colors';
 import { styles } from './styles';
 import { HomeViewProps } from './type';
@@ -11,6 +12,7 @@ import { HomeViewProps } from './type';
 export function HomeView({
   isLoading,
   currentStreak,
+  secondsUntilNextDay,
   totalCount,
   answeredCount,
   completedToday,
@@ -20,6 +22,7 @@ export function HomeView({
   onAnswer,
   onSwipedAll,
   onDismissReveal,
+  onStreakDayRollover,
   onLogout,
 }: HomeViewProps) {
   const { top } = useSafeAreaInsets();
@@ -38,7 +41,11 @@ export function HomeView({
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Card Challenge</Text>
-        <Text style={styles.streak}>Streak: {currentStreak}</Text>
+        <StreakTimer
+          streak={currentStreak}
+          secondsRemaining={secondsUntilNextDay}
+          onExpire={onStreakDayRollover}
+        />
       </View>
 
       <TouchableOpacity style={styles.logout} onPress={onLogout}>

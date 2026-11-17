@@ -54,6 +54,7 @@ export function HomeContainer() {
     <HomeView
       isLoading={isLoading && !data}
       currentStreak={data?.streak.currentStreak ?? 0}
+      secondsUntilNextDay={data?.streak.secondsUntilNextDay ?? 0}
       totalCount={data?.challenge.cardIds.length ?? 0}
       answeredCount={answeredCount}
       completedToday={completedToday}
@@ -63,6 +64,7 @@ export function HomeContainer() {
       onAnswer={handleAnswer}
       onSwipedAll={() => {}}
       onDismissReveal={() => setRevealCard(null)}
+      onStreakDayRollover={fetchHomeData}
       onLogout={clearSession}
     />
   );

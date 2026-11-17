@@ -12,7 +12,7 @@ Updated at the end of every milestone. This is the status tracker for the build,
 | M3 | Login | done |
 | M4 | Home: card render + swipe | done |
 | M5 | Collection tab | done |
-| M6 | Streak (timer-based) | pending |
+| M6 | Streak (timer-based) | done |
 | M7 | Streak-freeze buy screen | pending |
 | M8 | Backend scaffold + schema (`pullday-be`) | pending |
 | M9 | Basic CRUDs (`pullday-be`) | pending |
@@ -246,7 +246,7 @@ Each milestone is one approval-gated commit. Every milestone ends with: **Done c
 - **M5 · Collection tab** (~1.5h) — tuned FlatList grid + FastImage, owned in color / unowned greyed, tap → `CardDetail` (art, set, grade, story, price-history sparkline). Newly unlocked card appears here.
   *Done, verified on simulator:* real-data 3-column grid scrolls smoothly (removeClippedSubviews + fixed `getItemLayout`); owned (first 12) render full color, unowned dimmed via opacity; tapping any card navigates to `CardDetail` with real name/set/number/year, rarity badge, grade/population/current-price stats, a working 13-week `PriceSparkline`, and story text; Back returns to Collection. Added `ApiClient.getCards()` (mock returns the full real catalog), `CardThumb` (FastImage-backed grid cell), `useCardsQuery`, and the full `cardDetail/` screen folder (container/view/type/styles/utils, same query-hook contract as the rest of the app). → `feat: collection + card detail`
 - **M6 · Streak (timer-based)** (~1.5h) — `StreakTimer` component: current streak count + **live countdown to the next day boundary** (time left to keep the streak). Completing Home's challenge increments it; a mock "missed day" breaks it. Streak state in the mock layer, authoritative logic documented for later backend move.
-  *Done:* timer counts down live; completing challenge bumps streak; miss breaks it. → `feat: streak timer`
+  *Done, verified on simulator:* the day-boundary/freeze/break logic (`runStreakCheck`, `getStreak`) already existed in `MockApiClient` from M2/M4 — M6's work was the live-ticking UI on top of it. `StreakTimer` seeds its countdown from `StreakStatus.secondsUntilNextDay` (already UTC-midnight-based) and ticks every second client-side via `setInterval`; on hitting zero it calls `onStreakDayRollover` (wired to `fetchHomeData`) so a real day change resyncs today's challenge and streak instead of just freezing at `00:00:00`. Replaced Home's plain "Streak: N" text with this component; confirmed on-device the countdown visibly ticks down second by second. The "miss breaks the streak" path itself is unchanged, already-existing logic — not re-verified by an actual day-skip in this pass, since there's no dev-time-travel hook yet (a named stretch item); confirmed by reading `runStreakCheck`, not by moving the device clock. → `feat: streak timer`
 
 ### Phase 2 — Monetization screen (on mock data)
 - **M7 · Streak-freeze buy screen** (~1.5h) — one `ShopFreeze` screen: shows freezes owned (max 2), a **fake store** purchase flow with pending/succeeded/failed/cancelled states, on success adds a freeze in the mock layer. A held freeze auto-consumes on a mock missed day instead of breaking the streak.
